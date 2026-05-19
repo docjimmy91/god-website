@@ -36,32 +36,28 @@
         </div>
     </nav>
 
-    <!-- BANNER -->
-    <div class="w-full overflow-hidden">
-        <img 
-            src="banner.jpg" 
-            alt="GOD Banner" 
-            class="w-full h-auto object-cover"
-            style="max-height: 500px;"
-        >
-    </div>
-
-    <!-- Hero -->
-    <section class="pt-10 pb-16 px-6 text-center">
-        <div class="max-w-5xl mx-auto">
-            <h1 class="text-7xl md:text-8xl font-display font-black tracking-tighter leading-none mb-4">
-                Can you take me<br><span class="god-gradient">higher?</span>
+    <!-- BANNER WITH OVERLAY -->
+    <div class="relative w-full overflow-hidden">
+        <img src="banner.jpg" alt="GOD Banner" class="w-full h-auto object-cover" style="max-height: 620px;">
+        
+        <!-- Gradient overlay (darker at bottom) -->
+        <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/80"></div>
+        
+        <!-- Text & Button on Banner -->
+        <div class="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-12 px-6 text-center">
+            <h1 class="text-6xl md:text-7xl font-display font-black tracking-tighter leading-none mb-4 drop-shadow-lg">
+                Can you take me<br>
+                <span class="god-gradient">higher?</span>
             </h1>
-            <p class="text-2xl text-white/70 mb-8">The one true $GOD on Solana.</p>
             
             <a href="https://pump.fun/23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk" 
                target="_blank"
-               class="gold-button inline-flex items-center gap-x-3 px-10 py-4 rounded-3xl text-lg font-bold">
+               class="gold-button inline-flex items-center gap-x-3 px-10 py-4 rounded-3xl text-lg font-bold mt-2">
                 <i class="fas fa-rocket"></i>
                 <span>Buy on pump.fun</span>
             </a>
         </div>
-    </section>
+    </div>
 
     <!-- Judas Tracker -->
     <section id="judas" class="bg-[#111114] border-y border-white/10 py-16">
