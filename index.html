@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$GOD • Can you take me higher?</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; }
+        .god-gradient {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .section-header { font-size: 2.5rem; line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; }
+        .gold-button {
+            background: linear-gradient(to right, #FFD700, #FFA500);
+            color: black; font-weight: 700; transition: all 0.3s ease;
+        }
+        .gold-button:hover { transform: translateY(-2px); }
+        .live-dot { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="bg-[#0a0a0f] text-white">
+
+    <!-- NAVBAR -->
+    <nav class="border-b border-white/10 bg-[#0a0a0f]/95 backdrop-blur-lg fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center gap-x-3">
+                    <img src="logo.jpg" alt="$GOD Logo" class="w-11 h-11 rounded-2xl object-cover border border-white/20">
+                    <span class="font-display text-3xl font-bold tracking-tighter">$GOD</span>
+                </div>
+                <div class="hidden md:flex items-center gap-x-8 text-sm font-medium">
+                    <a href="#judas" class="hover:text-yellow-400">Judas Tracker</a>
+                    <a href="#how-to-buy" class="hover:text-yellow-400">How to Buy</a>
+                </div>
+                <a href="https://jup.ag/swap/SOL-23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk" target="_blank"
+                   class="gold-button flex items-center gap-x-2 px-6 py-3 rounded-2xl text-sm font-bold">
+                    <i class="fas fa-rocket"></i>
+                    <span>Buy $GOD</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="pt-20 pb-16 px-6 text-center">
+        <div class="max-w-5xl mx-auto pt-12">
+            <div class="inline-flex items-center gap-x-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-6">
+                <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                <span class="text-sm">Live on Solana</span>
+            </div>
+
+            <h1 class="text-7xl md:text-8xl font-display font-black tracking-tighter leading-none mb-4">
+                Can you take me<br><span class="god-gradient">higher?</span>
+            </h1>
+            <p class="text-2xl text-white/70 mb-10">The one true $GOD on Solana.</p>
+
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="https://jup.ag/swap/SOL-23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk" target="_blank"
+                   class="gold-button px-10 py-4 rounded-3xl text-lg font-bold flex items-center justify-center gap-x-3">
+                    <i class="fas fa-rocket"></i> Buy $GOD Now
+                </a>
+                <a href="#judas" class="px-8 py-4 rounded-3xl text-lg font-semibold border border-white/20 hover:bg-white/5 flex items-center justify-center gap-x-3">
+                    View Judas Tracker
+                </a>
+            </div>
+
+            <div class="mt-10">
+                <div class="text-xs text-white/40 mb-1">CONTRACT ADDRESS</div>
+                <div onclick="copyCA()" class="inline-flex items-center gap-x-2 bg-white/5 px-5 py-3 rounded-2xl cursor-pointer text-sm">
+                    <code class="font-mono text-yellow-300">23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk</code>
+                    <i class="fas fa-copy"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- JUDAS TRACKER -->
+    <section id="judas" class="bg-[#111114] border-y border-white/10 py-16">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <h2 class="section-header flex items-center gap-x-3">
+                        <i class="fas fa-user-secret text-red-500"></i> Judas Tracker
+                    </h2>
+                    <p class="text-white/70">Real-time • Sells of $50+</p>
+                </div>
+                <button onclick="manualRefresh()" class="px-5 py-2 border border-white/20 rounded-2xl text-sm flex items-center gap-x-2">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div class="bg-[#1a1a1f] border border-white/10 rounded-3xl p-6">
+                    <div class="text-sm text-white/50">TOTAL JUDAS</div>
+                    <div id="total-judas" class="text-5xl font-bold">47</div>
+                </div>
+                <div class="bg-[#1a1a1f] border border-white/10 rounded-3xl p-6">
+                    <div class="text-sm text-white/50">TOTAL SOLD BY JUDAS</div>
+                    <div id="total-sold" class="text-5xl font-bold">128.4M</div>
+                </div>
+                <div class="bg-[#1a1a1f] border border-white/10 rounded-3xl p-6">
+                    <div class="text-sm text-white/50">BIGGEST SELL</div>
+                    <div id="biggest-sell" class="text-5xl font-bold">$142K</div>
+                </div>
+            </div>
+
+            <h3 class="font-semibold mb-3">TOP JUDAS LEADERBOARD</h3>
+            <div class="bg-[#1a1a1f] border border-white/10 rounded-3xl overflow-hidden mb-8">
+                <table class="w-full text-sm">
+                    <thead class="text-white/50 text-xs"><tr>
+                        <th class="py-4 px-6 text-left">Rank</th>
+                        <th class="py-4 px-6 text-left">Wallet</th>
+                        <th class="py-4 px-6 text-right">Total Sold</th>
+                        <th class="py-4 px-6 text-right hidden md:table-cell"># Sells</th>
+                        <th class="py-4 px-6 text-right">Last Sell</th>
+                    </tr></thead>
+                    <tbody id="judas-leaderboard" class="divide-y divide-white/10"></tbody>
+                </table>
+            </div>
+
+            <h3 class="font-semibold mb-3">RECENT JUDAS SELLS</h3>
+            <div id="recent-sells" class="bg-[#1a1a1f] border border-white/10 rounded-3xl divide-y divide-white/10"></div>
+        </div>
+    </section>
+
+    <script>
+        async function fetchJudasData() {
+            try {
+                const res = await fetch('/api/judas');
+                const data = await res.json();
+                
+                if (data.judas) {
+                    renderLeaderboard(data.judas);
+                    renderRecent(data.recentSells || []);
+                    if (data.stats) {
+                        document.getElementById('total-judas').innerText = data.stats.totalJudas;
+                        document.getElementById('total-sold').innerText = data.stats.totalSold;
+                        document.getElementById('biggest-sell').innerText = data.stats.biggestSell;
+                    }
+                }
+            } catch(e) {
+                console.log("Using demo data");
+            }
+        }
+
+        function renderLeaderboard(data) {
+            const tbody = document.getElementById('judas-leaderboard');
+            tbody.innerHTML = data.map(item => `
+                <tr>
+                    <td class="py-4 px-6 font-bold text-yellow-400">#${item.rank}</td>
+                    <td class="py-4 px-6 font-mono text-red-400">${item.wallet} <span class="text-xs bg-red-500/10 px-2 rounded">JUDAS</span></td>
+                    <td class="py-4 px-6 text-right font-mono">$${item.totalSold.toLocaleString()}</td>
+                    <td class="py-4 px-6 text-right hidden md:table-cell">${item.sells}</td>
+                    <td class="py-4 px-6 text-right text-sm">${item.lastSell}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderRecent(data) {
+            const container = document.getElementById('recent-sells');
+            container.innerHTML = data.map(item => `
+                <div class="px-6 py-4 flex justify-between text-sm">
+                    <div><span class="font-mono text-red-400">${item.wallet}</span> <span class="text-xs bg-red-500/10 px-2 rounded">JUDAS</span></div>
+                    <div class="text-right font-mono">$${item.usd.toLocaleString()} <span class="text-xs text-white/40">${item.time}</span></div>
+                </div>
+            `).join('');
+        }
+
+        function manualRefresh() {
+            fetchJudasData();
+        }
+
+        function copyCA() {
+            navigator.clipboard.writeText("23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk");
+            alert("Contract copied!");
+        }
+
+        function init() {
+            fetchJudasData();
+            setInterval(fetchJudasData, 30000); // Auto refresh every 30s
+        }
+        window.onload = init;
+    </script>
+</body>
+</html>
