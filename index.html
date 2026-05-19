@@ -87,7 +87,7 @@
                     <h2 class="section-header flex items-center gap-x-3">
                         <i class="fas fa-user-secret text-red-500"></i> Judas Tracker
                     </h2>
-                    <p class="text-white/70">Real-time • Sells of $50+</p>
+                    <p class="text-white/70">Real-time • Sells above ~0.15 SOL</p>
                 </div>
                 <button onclick="manualRefresh()" class="px-5 py-2 border border-white/20 rounded-2xl text-sm flex items-center gap-x-2">
                     <i class="fas fa-sync-alt"></i> Refresh
@@ -161,14 +161,26 @@
             `).join('');
         }
 
-        function renderRecent(data) {
-            const container = document.getElementById('recent-sells');
-            container.innerHTML = data.map(item => `
-                <div class="px-6 py-4 flex justify-between text-sm">
-                    <div><span class="font-mono text-red-400">${item.wallet}</span> <span class="text-xs bg-red-500/10 px-2 rounded">JUDAS</span></div>
-                    <div class="text-right font-mono">$${item.usd.toLocaleString()} <span class="text-xs text-white/40">${item.time}</span></div>
-                </div>
-            `).join('');
+        function renderRecentSells(data) {
+    const container = document.getElementById('recent-sells');
+    if (!data || data.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 text-white/50 text-sm">No recent sells above threshold</div>`;
+        return;
+    }
+
+    container.innerHTML = data.map(sell => `
+        <div class="px-6 py-4 flex items-center justify-between text-sm">
+            <div class="flex items-center gap-x-3">
+                <span class="font-mono text-red-400">${sell.wallet}</span>
+                <span class="text-[10px] px-2.5 py-px bg-red-500/10 text-red-400 rounded">JUDAS</span>
+            </div>
+            <div class="text-right">
+                <div class="font-mono font-semibold">${sell.usd} SOL</div>
+                <div class="text-[10px] text-white/40">${sell.time}</div>
+            </div>
+        </div>
+    `).join('');
+}
         }
 
         function manualRefresh() {
