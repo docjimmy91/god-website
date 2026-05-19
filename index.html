@@ -36,9 +36,19 @@
         </div>
     </nav>
 
+    <!-- BANNER -->
+    <div class="w-full overflow-hidden">
+        <img 
+            src="banner.jpg" 
+            alt="GOD Banner" 
+            class="w-full h-auto object-cover"
+            style="max-height: 500px;"
+        >
+    </div>
+
     <!-- Hero -->
-    <section class="pt-20 pb-16 px-6 text-center">
-        <div class="max-w-5xl mx-auto pt-12">
+    <section class="pt-10 pb-16 px-6 text-center">
+        <div class="max-w-5xl mx-auto">
             <h1 class="text-7xl md:text-8xl font-display font-black tracking-tighter leading-none mb-4">
                 Can you take me<br><span class="god-gradient">higher?</span>
             </h1>
@@ -111,11 +121,9 @@
             try {
                 const res = await fetch('/api/judas');
                 const data = await res.json();
-
                 document.getElementById('total-judas').innerText = data.stats?.totalJudas || '0';
                 document.getElementById('total-sold').innerText = data.stats?.totalSold || 'Live data';
                 document.getElementById('biggest-sell').innerText = data.stats?.biggestSell || '$--';
-
                 renderLeaderboard(data.judas || []);
                 renderRecentSells(data.recentSells || []);
             } catch(e) {}
@@ -139,7 +147,6 @@
                 container.innerHTML = `<div class="px-6 py-4 text-white/50 text-sm">No recent sells</div>`;
                 return;
             }
-
             container.innerHTML = data.map(sell => `
                 <div class="px-6 py-4 flex justify-between text-sm">
                     <div>
