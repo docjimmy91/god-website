@@ -1,107 +1,91 @@
-// /api/judas.js - Improved Real-time Judas Tracker
+// /api/judas.js - Diagnostic + Real Data Version
 export default async function handler(req, res) {
     const TOKEN_MINT = "23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
 
+    // Check if key exists
     if (!HELIUS_API_KEY) {
         return res.status(200).json({
-            judas: [
-                { rank: 1, wallet: "JUDAS...xK9p", totalSold: 124800, sells: 7, lastSell: "2h ago" },
-                { rank: 2, wallet: "BETRAY...mN3q", totalSold: 87200, sells: 4, lastSell: "5h ago" },
-            ],
-            recentSells: [
-                { wallet: "JUDAS...xK9p", usd: 31200, time: "14m ago" },
-                { wallet: "BETRAY...mN3q", usd: 20500, time: "47m ago" },
-            ],
-            stats: {
-                totalJudas: "47",
-                totalSold: "128.4M",
-                biggestSell: "$142K"
-            },
-            note: "Waiting for HELIUS_API_KEY"
+            connected: false,
+            message: "Helius API key NOT found",
+            judas: [],
+            recentSells: [],
+            stats: { totalJudas: "0", totalSold: "Key missing", biggestSell: "-" }
         });
     }
 
     try {
-        const url = `https://api.helius.xyz/v0/addresses/${TOKEN_MINT}/transactions?api-key=${HELIUS_API_KEY}&limit=40`;
+        // Test connection to Helius
+        const url = `https://api.helius.xyz/v0/addresses/${TOKEN_MINT}/transactions?api-key=${HELIUS_API_KEY}&limit=20`;
         const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`Helius API error: ${response.status}`);
+        }
+
         const transactions = await response.json();
 
+        // Simple processing
         const walletMap = {};
         const recentSellsList = [];
 
         if (Array.isArray(transactions)) {
             transactions.forEach(tx => {
-                // Look for sell activity
-                const isSell = tx.type === 'SWAP' || 
-                              tx.type === 'TOKEN_TRANSFER' || 
-                              (tx.events && tx.events.swap);
+                const amount = tx.amount || (tx.events?.swap?.nativeInput?.amount) || 0;
 
-                if (isSell && tx.feePayer) {
-                    const wallet = tx.feePayer;
-                    const shortWallet = wallet.slice(0, 6) + '...' + wallet.slice(-4);
+                if (amount > 20000) {
+                    const wallet = tx.feePayer || tx.fromUserAccount || "Unknown";
+                    const shortWallet = wallet.slice(0, 6) + "..." + wallet.slice(-4);
 
-                    // Try to get a reasonable amount
-                    let amount = 0;
-                    if (tx.events?.swap?.nativeInput?.amount) {
-                        amount = parseFloat(tx.events.swap.nativeInput.amount);
-                    } else if (tx.amount) {
-                        amount = parseFloat(tx.amount);
+                    if (!walletMap[shortWallet]) {
+                        walletMap[shortWallet] = { total: 0, count: 0 };
                     }
+                    walletMap[shortWallet].total += parseFloat(amount);
+                    walletMap[shortWallet].count += 1;
 
-                    if (amount > 25000) {
-                        if (!walletMap[shortWallet]) {
-                            walletMap[shortWallet] = { total: 0, count: 0 };
-                        }
-                        walletMap[shortWallet].total += amount;
-                        walletMap[shortWallet].count += 1;
-
-                        recentSellsList.push({
-                            wallet: shortWallet,
-                            usd: Math.round(amount * 0.000002),
-                            time: new Date(tx.timestamp * 1000).toLocaleTimeString([], { 
-                                hour: '2-digit', minute: '2-digit' 
-                            })
-                        });
-                    }
+                    recentSellsList.push({
+                        wallet: shortWallet,
+                        usd: Math.round(parseFloat(amount) * 0.000002),
+                        time: new Date(tx.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    });
                 }
             });
         }
 
-        // Create leaderboard
         const leaderboard = Object.entries(walletMap)
-            .map(([wallet, data]) => ({
-                rank: 0,
+            .map(([wallet, data], index) => ({
+                rank: index + 1,
                 wallet,
                 totalSold: Math.round(data.total),
                 sells: data.count,
                 lastSell: "recent"
             }))
             .sort((a, b) => b.totalSold - a.totalSold)
-            .slice(0, 8)
-            .map((item, i) => ({ ...item, rank: i + 1 }));
+            .slice(0, 8);
 
-        res.setHeader('Cache-Control', 's-maxage=15');
-        res.status(200).json({
+        return res.status(200).json({
+            connected: true,
+            message: "Helius connected successfully",
             judas: leaderboard.length > 0 ? leaderboard : [
-                { rank: 1, wallet: "No large sells yet", totalSold: 0, sells: 0, lastSell: "-" }
+                { rank: 1, wallet: "No large sells found yet", totalSold: 0, sells: 0, lastSell: "-" }
             ],
             recentSells: recentSellsList.length > 0 ? recentSellsList.slice(0, 6) : [
-                { wallet: "Monitoring...", usd: 0, time: "live" }
+                { wallet: "Monitoring live...", usd: 0, time: "now" }
             ],
             stats: {
                 totalJudas: leaderboard.length || "0",
-                totalSold: leaderboard.length > 0 ? "Real data" : "Waiting for sells",
-                biggestSell: "$--"
+                totalSold: "Live data",
+                biggestSell: leaderboard.length > 0 ? `$${(leaderboard[0].totalSold / 1000).toFixed(0)}K` : "$--"
             }
         });
 
     } catch (error) {
-        console.error("Helius error:", error);
-        res.status(200).json({
-            judas: [{ rank: 1, wallet: "Error fetching data", totalSold: 0, sells: 0, lastSell: "-" }],
+        return res.status(200).json({
+            connected: false,
+            message: "Error: " + error.message,
+            judas: [],
             recentSells: [],
-            stats: { totalJudas: "Error", totalSold: "Check logs", biggestSell: "-" }
+            stats: { totalJudas: "Error", totalSold: "Check Vercel logs", biggestSell: "-" }
         });
     }
 }
