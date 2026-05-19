@@ -36,23 +36,20 @@
         </div>
     </nav>
 
-    <!-- BANNER WITH OVERLAY -->
+    <!-- BANNER -->
     <div class="relative w-full overflow-hidden">
         <img src="banner.jpg" alt="GOD Banner" class="w-full h-auto object-cover" style="max-height: 620px;">
+        <div class="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/85"></div>
         
-        <!-- Gradient overlay (darker at bottom) -->
-        <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/80"></div>
-        
-        <!-- Text & Button on Banner -->
-        <div class="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-12 px-6 text-center">
-            <h1 class="text-6xl md:text-7xl font-display font-black tracking-tighter leading-none mb-4 drop-shadow-lg">
+        <div class="absolute bottom-8 left-0 right-0 flex flex-col items-center text-center px-6">
+            <h1 class="text-6xl md:text-7xl font-display font-black tracking-tighter leading-none mb-3 drop-shadow-xl">
                 Can you take me<br>
                 <span class="god-gradient">higher?</span>
             </h1>
             
             <a href="https://pump.fun/23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk" 
                target="_blank"
-               class="gold-button inline-flex items-center gap-x-3 px-10 py-4 rounded-3xl text-lg font-bold mt-2">
+               class="mt-4 gold-button inline-flex items-center gap-x-3 px-9 py-3.5 rounded-3xl text-base font-bold">
                 <i class="fas fa-rocket"></i>
                 <span>Buy on pump.fun</span>
             </a>
@@ -74,7 +71,6 @@
                 </button>
             </div>
 
-            <!-- Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div class="bg-[#1a1a1f] border border-white/10 rounded-3xl p-6">
                     <div class="text-white/50 text-sm">TOTAL JUDAS</div>
@@ -90,7 +86,6 @@
                 </div>
             </div>
 
-            <!-- Leaderboard -->
             <h3 class="font-semibold mb-3">TOP JUDAS LEADERBOARD</h3>
             <div class="bg-[#1a1a1f] border border-white/10 rounded-3xl overflow-hidden mb-8">
                 <table class="w-full text-sm">
@@ -106,7 +101,6 @@
                 </table>
             </div>
 
-            <!-- Recent Sells -->
             <h3 class="font-semibold mb-3">RECENT JUDAS SELLS</h3>
             <div id="recent-sells" class="bg-[#1a1a1f] border border-white/10 rounded-3xl divide-y divide-white/10"></div>
         </div>
