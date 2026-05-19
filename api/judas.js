@@ -1,4 +1,4 @@
-// /api/judas.js - More sensitive pump.fun version
+// /api/judas.js - Track sells by SOL received (recommended for pump.fun)
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
@@ -22,39 +22,41 @@ export default async function handler(req, res) {
 
         if (Array.isArray(transactions)) {
             transactions.forEach(tx => {
-                let amount = 0;
+                let solReceived = 0;
 
-                // Multiple ways to catch pump.fun sell amounts
-                if (tx.amount && tx.amount > 0) {
-                    amount = parseFloat(tx.amount);
-                } 
-                else if (tx.events?.swap?.tokenInput?.amount) {
-                    amount = parseFloat(tx.events.swap.tokenInput.amount);
-                } 
-                else if (tx.tokenTransfers && tx.tokenTransfers.length > 0) {
-                    // Look for tokens leaving the bonding curve
-                    const sellTx = tx.tokenTransfers.find(t => 
-                        t.mint === "23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk"
-                    );
-                    if (sellTx) amount = parseFloat(sellTx.amount);
+                // Look for SOL being sent to the seller (most reliable for pump.fun sells)
+                if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
+                    tx.nativeTransfers.forEach(transfer => {
+                        // SOL received by the seller
+                        if (transfer.toUserAccount && transfer.amount) {
+                            solReceived += parseFloat(transfer.amount) / 1e9; // Convert lamports to SOL
+                        }
+                    });
                 }
 
-                const usdValue = amount * 0.000002;   // Rough conversion
+                // Also check nativeTransfers in a different structure
+                if (tx.nativeTransfers) {
+                    tx.nativeTransfers.forEach(transfer => {
+                        if (transfer.amount) {
+                            solReceived = Math.max(solReceived, parseFloat(transfer.amount) / 1e9);
+                        }
+                    });
+                }
 
-                // Temporarily lowered to $10 so we can see if data flows
-                if (usdValue > 10) {
+                // Filter: Sells where seller received more than 0.15 SOL (~$25–$40 depending on price)
+                if (solReceived > 0.15) {
                     const wallet = tx.feePayer || tx.fromUserAccount || "Unknown";
                     const shortWallet = wallet.slice(0, 6) + "..." + wallet.slice(-4);
 
                     if (!walletMap[shortWallet]) {
                         walletMap[shortWallet] = { total: 0, count: 0 };
                     }
-                    walletMap[shortWallet].total += usdValue;
+                    walletMap[shortWallet].total += solReceived;
                     walletMap[shortWallet].count += 1;
 
                     recentSellsList.push({
                         wallet: shortWallet,
-                        usd: Math.round(usdValue),
+                        usd: Math.round(solReceived * 160), // Rough conversion (adjust if needed)
                         time: new Date(tx.timestamp * 1000).toLocaleTimeString([], { 
                             hour: '2-digit', minute: '2-digit' 
                         })
@@ -67,23 +69,23 @@ export default async function handler(req, res) {
             .map(([wallet, data], index) => ({
                 rank: index + 1,
                 wallet,
-                totalSold: Math.round(data.total),
+                totalSold: data.total.toFixed(2) + " SOL",
                 sells: data.count,
                 lastSell: "recent"
             }))
-            .sort((a, b) => b.totalSold - a.totalSold)
+            .sort((a, b) => parseFloat(b.totalSold) - parseFloat(a.totalSold))
             .slice(0, 8);
 
         res.status(200).json({
             connected: true,
             judas: leaderboard.length > 0 ? leaderboard : [
-                { rank: 1, wallet: "No sells detected in last 50 txs", totalSold: 0, sells: 0, lastSell: "-" }
+                { rank: 1, wallet: "No sells above ~0.15 SOL yet", totalSold: "0 SOL", sells: 0, lastSell: "-" }
             ],
             recentSells: recentSellsList.length > 0 ? recentSellsList.slice(0, 6) : [],
             stats: {
                 totalJudas: leaderboard.length || "0",
                 totalSold: "Live data",
-                biggestSell: leaderboard.length > 0 ? `$${Math.round(leaderboard[0].totalSold)}` : "$--"
+                biggestSell: leaderboard.length > 0 ? `${parseFloat(leaderboard[0].totalSold).toFixed(2)} SOL` : "$--"
             }
         });
 
