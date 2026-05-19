@@ -1,4 +1,4 @@
-// /api/judas.js - Pump.fun Bonding Curve Version ($50+ filter)
+// /api/judas.js - More sensitive pump.fun version
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
@@ -8,12 +8,11 @@ export default async function handler(req, res) {
             connected: false,
             judas: [],
             recentSells: [],
-            stats: { totalJudas: "0", totalSold: "Helius key missing", biggestSell: "-" }
+            stats: { totalJudas: "0", totalSold: "Key missing", biggestSell: "-" }
         });
     }
 
     try {
-        // Query transactions on the bonding curve (more accurate for pump.fun)
         const url = `https://api.helius.xyz/v0/addresses/${BONDING_CURVE}/transactions?api-key=${HELIUS_API_KEY}&limit=50`;
         const response = await fetch(url);
         const transactions = await response.json();
@@ -25,25 +24,25 @@ export default async function handler(req, res) {
             transactions.forEach(tx => {
                 let amount = 0;
 
-                // Try to extract sell amount from pump.fun transactions
-                if (tx.amount) {
+                // Multiple ways to catch pump.fun sell amounts
+                if (tx.amount && tx.amount > 0) {
                     amount = parseFloat(tx.amount);
-                } else if (tx.events?.swap?.tokenInput?.amount) {
+                } 
+                else if (tx.events?.swap?.tokenInput?.amount) {
                     amount = parseFloat(tx.events.swap.tokenInput.amount);
-                } else if (tx.tokenTransfers && tx.tokenTransfers.length > 0) {
-                    // Look for token being sent out (sell)
-                    const sellTransfer = tx.tokenTransfers.find(t => 
-                        t.mint === "23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk" && 
-                        t.fromUserAccount === BONDING_CURVE
+                } 
+                else if (tx.tokenTransfers && tx.tokenTransfers.length > 0) {
+                    // Look for tokens leaving the bonding curve
+                    const sellTx = tx.tokenTransfers.find(t => 
+                        t.mint === "23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk"
                     );
-                    if (sellTransfer) amount = parseFloat(sellTransfer.amount);
+                    if (sellTx) amount = parseFloat(sellTx.amount);
                 }
 
-                // Rough USD conversion (adjust if needed)
-                const usdValue = amount * 0.000002;
+                const usdValue = amount * 0.000002;   // Rough conversion
 
-                // Filter: Sells above $50
-                if (usdValue > 50) {
+                // Temporarily lowered to $10 so we can see if data flows
+                if (usdValue > 10) {
                     const wallet = tx.feePayer || tx.fromUserAccount || "Unknown";
                     const shortWallet = wallet.slice(0, 6) + "..." + wallet.slice(-4);
 
@@ -78,7 +77,7 @@ export default async function handler(req, res) {
         res.status(200).json({
             connected: true,
             judas: leaderboard.length > 0 ? leaderboard : [
-                { rank: 1, wallet: "No sells above $50 yet", totalSold: 0, sells: 0, lastSell: "-" }
+                { rank: 1, wallet: "No sells detected in last 50 txs", totalSold: 0, sells: 0, lastSell: "-" }
             ],
             recentSells: recentSellsList.length > 0 ? recentSellsList.slice(0, 6) : [],
             stats: {
