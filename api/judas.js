@@ -1,15 +1,10 @@
-// /api/judas.js - Clean version with correct ranking
+// /api/judas.js - With protection against fake large sells
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
 
     if (!HELIUS_API_KEY) {
-        return res.status(200).json({
-            connected: false,
-            judas: [],
-            recentSells: [],
-            stats: { totalJudas: "0", totalSold: "Key missing", biggestSell: "-" }
-        });
+        return res.status(200).json({ connected: false, judas: [], recentSells: [] });
     }
 
     try {
@@ -32,8 +27,8 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // Filter: Sells where seller received more than 0.15 SOL
-                if (solReceived > 0.15) {
+                // Only accept reasonable single sells (max 30 SOL per transaction)
+                if (solReceived > 0.15 && solReceived < 30) {
                     const wallet = tx.feePayer || tx.fromUserAccount || "Unknown";
                     const shortWallet = wallet.slice(0, 6) + "..." + wallet.slice(-4);
 
@@ -45,7 +40,7 @@ export default async function handler(req, res) {
 
                     recentSellsList.push({
                         wallet: shortWallet,
-                        usd: Math.round(solReceived * 160),
+                        sol: solReceived,
                         time: new Date(tx.timestamp * 1000).toLocaleTimeString([], { 
                             hour: '2-digit', minute: '2-digit' 
                         })
@@ -54,12 +49,10 @@ export default async function handler(req, res) {
             });
         }
 
-        // Create properly ranked leaderboard
-        const sortedWallets = Object.entries(walletMap)
-            .sort((a, b) => b[1].total - a[1].total)
-            .slice(0, 8);
-
-        const leaderboard = sortedWallets.map(([wallet, data], index) => ({
+        // Sort and create leaderboard
+        const sorted = Object.entries(walletMap).sort((a, b) => b[1].total - a[1].total);
+        
+        const leaderboard = sorted.slice(0, 8).map(([wallet, data], index) => ({
             rank: index + 1,
             wallet,
             totalSold: data.total.toFixed(2) + " SOL",
@@ -67,25 +60,26 @@ export default async function handler(req, res) {
             lastSell: "recent"
         }));
 
+        // Judas #1 = Biggest legitimate seller
+        const judasOne = sorted.length > 0 ? {
+            wallet: sorted[0][0],
+            totalSold: sorted[0][1].total.toFixed(2) + " SOL",
+            sells: sorted[0][1].count
+        } : null;
+
         res.status(200).json({
             connected: true,
-            judas: leaderboard.length > 0 ? leaderboard : [
-                { rank: 1, wallet: "No sells above 0.15 SOL yet", totalSold: "0 SOL", sells: 0, lastSell: "-" }
-            ],
-            recentSells: recentSellsList.length > 0 ? recentSellsList.slice(0, 6) : [],
+            judas: leaderboard,
+            recentSells: recentSellsList.slice(0, 8),
+            judasOne: judasOne,
             stats: {
-                totalJudas: leaderboard.length || "0",
+                totalJudas: leaderboard.length,
                 totalSold: "Live data",
-                biggestSell: leaderboard.length > 0 ? `${parseFloat(leaderboard[0].totalSold)} SOL` : "$--"
+                biggestSell: judasOne ? judasOne.totalSold : "$--"
             }
         });
 
     } catch (error) {
-        res.status(200).json({
-            connected: false,
-            judas: [],
-            recentSells: [],
-            stats: { totalJudas: "Error", totalSold: error.message, biggestSell: "-" }
-        });
+        res.status(200).json({ connected: false, judas: [], recentSells: [] });
     }
 }
