@@ -1,4 +1,4 @@
-// /api/judas.js - Improved SOL amount detection (only count what the seller actually received)
+// /api/judas.js - Improved detection (tracks SOL leaving the bonding curve)
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
@@ -18,19 +18,28 @@ export default async function handler(req, res) {
         if (Array.isArray(transactions)) {
             transactions.forEach(tx => {
                 let solReceived = 0;
-                const seller = tx.feePayer; // The wallet that initiated the sell
+                const seller = tx.feePayer;
 
+                // Method 1: SOL leaving the bonding curve (more reliable for pump.fun)
                 if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
-                        // Only count SOL that was actually sent TO the seller
+                        if (transfer.fromUserAccount === BONDING_CURVE && transfer.amount) {
+                            solReceived += parseFloat(transfer.amount) / 1e9;
+                        }
+                    });
+                }
+
+                // Method 2: Fallback - SOL received by the seller
+                if (solReceived === 0 && tx.nativeTransfers && tx.nativeTransfers.length > 0) {
+                    tx.nativeTransfers.forEach(transfer => {
                         if (transfer.toUserAccount === seller && transfer.amount) {
                             solReceived += parseFloat(transfer.amount) / 1e9;
                         }
                     });
                 }
 
-                // Filter: Only include reasonable sells (between 0.15 SOL and 30 SOL)
-                if (solReceived > 0.15 && solReceived < 30) {
+                // Adjust threshold if needed (currently 0.1 SOL minimum)
+                if (solReceived > 0.1 && solReceived < 30) {
                     const shortWallet = seller.slice(0, 6) + "..." + seller.slice(-4);
 
                     if (!walletMap[shortWallet]) {
@@ -55,7 +64,6 @@ export default async function handler(req, res) {
             });
         }
 
-        // Sort and create leaderboard
         const sorted = Object.entries(walletMap).sort((a, b) => b[1].total - a[1].total);
 
         const leaderboard = sorted.slice(0, 8).map(([shortWallet, data], index) => ({
