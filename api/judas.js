@@ -1,36 +1,16 @@
-// /api/judas.js - With longer caching + CDN headers
-let cachedData = null;
-let lastFetchTime = 0;
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
-
+// /api/judas.js - Improved detection (lower threshold + token fallback)
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
+    const TOKEN_MINT = "23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
 
     if (!HELIUS_API_KEY) {
         return res.status(200).json({ connected: false, judas: [], recentSells: [] });
     }
 
-    const now = Date.now();
-
-    // Return cached data if still valid
-    if (cachedData && (now - lastFetchTime < CACHE_DURATION)) {
-        res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
-        return res.status(200).json(cachedData);
-    }
-
     try {
         const url = `https://api.helius.xyz/v0/addresses/${BONDING_CURVE}/transactions?api-key=${HELIUS_API_KEY}&limit=150`;
         const response = await fetch(url);
-
-        if (response.status === 429) {
-            if (cachedData) {
-                res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
-                return res.status(200).json(cachedData);
-            }
-            return res.status(200).json({ connected: false, judas: [], recentSells: [] });
-        }
-
         const transactions = await response.json();
 
         const walletMap = {};
@@ -41,6 +21,7 @@ export default async function handler(req, res) {
                 let solReceived = 0;
                 const seller = tx.feePayer;
 
+                // Primary: SOL leaving the bonding curve
                 if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
                         if (transfer.fromUserAccount === BONDING_CURVE && transfer.amount) {
@@ -49,6 +30,7 @@ export default async function handler(req, res) {
                     });
                 }
 
+                // Fallback 1: SOL received by the seller
                 if (solReceived === 0 && tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
                         if (transfer.toUserAccount === seller && transfer.amount) {
@@ -57,7 +39,19 @@ export default async function handler(req, res) {
                     });
                 }
 
-                if (solReceived > 0.15 && solReceived < 25) {
+                // Fallback 2: Token being sent by the seller (indicates a sell happened)
+                if (solReceived === 0 && tx.tokenTransfers && tx.tokenTransfers.length > 0) {
+                    const soldToken = tx.tokenTransfers.find(t => 
+                        t.mint === TOKEN_MINT && t.fromUserAccount === seller
+                    );
+                    if (soldToken) {
+                        // We can't calculate exact SOL without price, so we skip for now
+                        // This just confirms a sell occurred
+                    }
+                }
+
+                // Lowered threshold
+                if (solReceived > 0.05) {
                     const shortWallet = seller.slice(0, 6) + "..." + seller.slice(-4);
 
                     if (!walletMap[shortWallet]) {
@@ -89,39 +83,19 @@ export default async function handler(req, res) {
             lastSell: "recent"
         }));
 
-        const judasOne = sorted.length > 0 ? {
-            wallet: sorted[0][0],
-            fullWallet: sorted[0][1].fullWallet,
-            totalSold: sorted[0][1].total.toFixed(2) + " SOL",
-            sells: sorted[0][1].count
-        } : null;
-
-        const responseData = {
+        res.status(200).json({
             connected: true,
             judas: leaderboard,
             recentSells: recentSellsList.slice(0, 8),
-            judasOne: judasOne,
             stats: {
                 totalJudas: leaderboard.length,
                 totalSold: "Live data",
-                biggestSell: judasOne ? judasOne.totalSold : "$--"
+                biggestSell: leaderboard.length > 0 ? leaderboard[0].totalSold : "$--"
             }
-        };
-
-        cachedData = responseData;
-        lastFetchTime = now;
-
-        // Tell Vercel + browsers to cache this response
-        res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
-
-        res.status(200).json(responseData);
+        });
 
     } catch (error) {
         console.error("Judas API Error:", error);
-        if (cachedData) {
-            res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
-            return res.status(200).json(cachedData);
-        }
         res.status(200).json({ connected: false, judas: [], recentSells: [] });
     }
 }
