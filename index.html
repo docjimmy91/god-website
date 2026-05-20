@@ -233,73 +233,87 @@
     </section>
 
     <script>
-        async function fetchJudasData() {
-            try {
-                const res = await fetch('/api/judas');
-                const data = await res.json();
-                document.getElementById('total-judas').innerText = data.stats?.totalJudas || '0';
-                document.getElementById('total-sold').innerText = data.stats?.totalSold || 'Live data';
-                document.getElementById('biggest-sell').innerText = data.stats?.biggestSell || '$--';
-                renderLeaderboard(data.judas || []);
-                renderRecentSells(data.recentSells || []);
-            } catch(e) {}
+    async function fetchJudasData() {
+        try {
+            const res = await fetch('/api/judas');
+            const data = await res.json();
+
+            document.getElementById('total-judas').innerText = data.stats?.totalJudas || '0';
+            document.getElementById('total-sold').innerText = data.stats?.totalSold || 'Live data';
+            document.getElementById('biggest-sell').innerText = data.stats?.biggestSell || '$--';
+
+            renderLeaderboard(data.judas || []);
+            renderRecentSells(data.recentSells || []);
+        } catch(e) {
+            console.error("Error fetching Judas data:", e);
+        }
+    }
+
+    function renderLeaderboard(data) {
+        const tbody = document.getElementById('judas-leaderboard');
+        tbody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center text-white/50">No Judas wallets yet</td></tr>`;
+            return;
         }
 
-        function renderLeaderboard(data) {
-            const tbody = document.getElementById('judas-leaderboard');
-            tbody.innerHTML = data.map(item => {
-                const fullAddress = item.fullWallet || item.wallet;
-                const solscanLink = `https://solscan.io/account/${fullAddress}`;
+        data.forEach(item => {
+            const fullAddress = item.fullWallet || item.wallet;
+            const solscanLink = `https://solscan.io/account/${fullAddress}`;
 
-                return `
-                    <tr>
-                        <td class="py-4 px-6 font-bold text-yellow-400">#${item.rank}</td>
-                        <td class="py-4 px-6">
-                            <a href="${solscanLink}" target="_blank" 
-                               class="font-mono text-red-400 hover:text-red-300 hover:underline">
-                                ${item.wallet}
-                            </a>
-                        </td>
-                        <td class="py-4 px-6 text-right font-mono font-semibold">${item.totalSold}</td>
-                        <td class="py-4 px-6 text-right text-white/60 hidden md:table-cell">${item.sells}</td>
-                    </tr>
-                `;
-            }).join('');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="py-4 px-6 font-bold text-yellow-400">#${item.rank}</td>
+                <td class="py-4 px-6">
+                    <a href="${solscanLink}" target="_blank" class="font-mono text-red-400 hover:text-red-300 hover:underline">
+                        ${item.wallet}
+                    </a>
+                </td>
+                <td class="py-4 px-6 text-right font-mono font-semibold">${item.totalSold}</td>
+                <td class="py-4 px-6 text-right text-white/60 hidden md:table-cell">${item.sells}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function renderRecentSells(data) {
+        const container = document.getElementById('recent-sells');
+        container.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `<div class="px-6 py-4 text-white/50 text-sm">No recent sells</div>`;
+            return;
         }
 
-        function renderRecentSells(data) {
-            const container = document.getElementById('recent-sells');
-            if (!data.length) {
-                container.innerHTML = `<div class="px-6 py-4 text-white/50 text-sm">No recent sells</div>`;
-                return;
-            }
-            container.innerHTML = data.map(sell => {
-                const fullAddress = sell.fullWallet || sell.wallet;
-                const solscanLink = `https://solscan.io/account/${fullAddress}`;
+        data.forEach(sell => {
+            const fullAddress = sell.fullWallet || sell.wallet;
+            const solscanLink = `https://solscan.io/account/${fullAddress}`;
 
-                return `
-                    <div class="px-6 py-4 flex justify-between text-sm">
-                        <div>
-                            <a href="${solscanLink}" target="_blank" 
-                               class="font-mono text-red-400 hover:text-red-300 hover:underline">
-                                ${sell.wallet}
-                            </a>
-                            <span class="ml-2 text-[10px] px-2 py-px bg-red-500/10 text-red-400 rounded">JUDAS</span>
-                        </div>
-                        <div class="text-right font-mono">
-                            ${parseFloat(sell.sol).toFixed(2)} SOL 
-                            <span class="text-white/40 text-xs">${sell.time}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
+            const div = document.createElement('div');
+            div.className = `px-6 py-4 flex justify-between text-sm border-b border-white/10 last:border-none`;
+            div.innerHTML = `
+                <div>
+                    <a href="${solscanLink}" target="_blank" class="font-mono text-red-400 hover:text-red-300 hover:underline">
+                        ${sell.wallet}
+                    </a>
+                    <span class="ml-2 text-[10px] px-2 py-px bg-red-500/10 text-red-400 rounded">JUDAS</span>
+                </div>
+                <div class="text-right font-mono">
+                    ${parseFloat(sell.sol).toFixed(2)} SOL 
+                    <span class="text-white/40 text-xs">${sell.time}</span>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
 
-        function init() {
-            fetchJudasData();
-            setInterval(fetchJudasData, 600000); // Auto refresh every 10 minutes
-        }
-        window.onload = init;
-    </script>
+    function init() {
+        fetchJudasData();
+        setInterval(fetchJudasData, 1200000); // Every 20 minutes
+    }
+
+    window.onload = init;
+</script>
 </body>
 </html>
