@@ -1,10 +1,22 @@
-// /api/judas.js - Improved SOL amount detection (only count what the seller actually received)
+// /api/judas.js - With caching + efficiency improvements
+let cachedData = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes cache
+
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
 
     if (!HELIUS_API_KEY) {
         return res.status(200).json({ connected: false, judas: [], recentSells: [] });
+    }
+
+    const now = Date.now();
+
+    // Return cached data if still valid (no Helius call needed)
+    if (cachedData && (now - lastFetchTime < CACHE_DURATION)) {
+        res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
+        return res.status(200).json(cachedData);
     }
 
     try {
@@ -18,7 +30,7 @@ export default async function handler(req, res) {
         if (Array.isArray(transactions)) {
             transactions.forEach(tx => {
                 let solReceived = 0;
-                const seller = tx.feePayer; // The wallet that initiated the sell
+                const seller = tx.feePayer;
 
                 if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
@@ -29,15 +41,14 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // Filter: Only include reasonable sells (between 0.15 SOL and 30 SOL)
                 if (solReceived > 0.15 && solReceived < 30) {
                     const shortWallet = seller.slice(0, 6) + "..." + seller.slice(-4);
 
                     if (!walletMap[shortWallet]) {
-                        walletMap[shortWallet] = { 
-                            total: 0, 
-                            count: 0, 
-                            fullWallet: seller 
+                        walletMap[shortWallet] = {
+                            total: 0,
+                            count: 0,
+                            fullWallet: seller
                         };
                     }
                     walletMap[shortWallet].total += solReceived;
@@ -47,15 +58,14 @@ export default async function handler(req, res) {
                         wallet: shortWallet,
                         fullWallet: seller,
                         sol: solReceived,
-                        time: new Date(tx.timestamp * 1000).toLocaleTimeString([], { 
-                            hour: '2-digit', minute: '2-digit' 
+                        time: new Date(tx.timestamp * 1000).toLocaleTimeString([], {
+                            hour: '2-digit', minute: '2-digit'
                         })
                     });
                 }
             });
         }
 
-        // Sort and create leaderboard
         const sorted = Object.entries(walletMap).sort((a, b) => b[1].total - a[1].total);
 
         const leaderboard = sorted.slice(0, 8).map(([shortWallet, data], index) => ({
@@ -74,7 +84,7 @@ export default async function handler(req, res) {
             sells: sorted[0][1].count
         } : null;
 
-        res.status(200).json({
+        const responseData = {
             connected: true,
             judas: leaderboard,
             recentSells: recentSellsList.slice(0, 8),
@@ -84,9 +94,22 @@ export default async function handler(req, res) {
                 totalSold: "Live data",
                 biggestSell: judasOne ? judasOne.totalSold : "$--"
             }
-        });
+        };
+
+        // Cache the result
+        cachedData = responseData;
+        lastFetchTime = now;
+
+        res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
+        res.status(200).json(responseData);
 
     } catch (error) {
-        res.status(200).json({ connected: false, judas: [], recentSells: [] });
-    }
-}
+        console.error("Judas API Error:", error);
+
+        // Return cached data on error if available
+        if (cachedData) {
+            res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
+            return res.status(200).json(cachedData);
+        }
+
+        res.status
