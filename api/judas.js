@@ -1,7 +1,7 @@
-// /api/judas.js - With rate limit protection + caching
+// /api/judas.js - With longer caching + CDN headers
 let cachedData = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
@@ -13,8 +13,9 @@ export default async function handler(req, res) {
 
     const now = Date.now();
 
-    // Return cached data if it's still fresh
+    // Return cached data if still valid
     if (cachedData && (now - lastFetchTime < CACHE_DURATION)) {
+        res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
         return res.status(200).json(cachedData);
     }
 
@@ -22,10 +23,9 @@ export default async function handler(req, res) {
         const url = `https://api.helius.xyz/v0/addresses/${BONDING_CURVE}/transactions?api-key=${HELIUS_API_KEY}&limit=150`;
         const response = await fetch(url);
 
-        // Handle rate limiting
         if (response.status === 429) {
-            console.warn("Helius rate limit hit. Returning cached data if available.");
             if (cachedData) {
+                res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
                 return res.status(200).json(cachedData);
             }
             return res.status(200).json({ connected: false, judas: [], recentSells: [] });
@@ -41,7 +41,6 @@ export default async function handler(req, res) {
                 let solReceived = 0;
                 const seller = tx.feePayer;
 
-                // Method 1: SOL leaving the bonding curve
                 if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
                         if (transfer.fromUserAccount === BONDING_CURVE && transfer.amount) {
@@ -50,7 +49,6 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // Method 2: Fallback - SOL received by the seller
                 if (solReceived === 0 && tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
                         if (transfer.toUserAccount === seller && transfer.amount) {
@@ -63,11 +61,7 @@ export default async function handler(req, res) {
                     const shortWallet = seller.slice(0, 6) + "..." + seller.slice(-4);
 
                     if (!walletMap[shortWallet]) {
-                        walletMap[shortWallet] = { 
-                            total: 0, 
-                            count: 0, 
-                            fullWallet: seller 
-                        };
+                        walletMap[shortWallet] = { total: 0, count: 0, fullWallet: seller };
                     }
                     walletMap[shortWallet].total += solReceived;
                     walletMap[shortWallet].count += 1;
@@ -114,20 +108,20 @@ export default async function handler(req, res) {
             }
         };
 
-        // Cache the successful response
         cachedData = responseData;
         lastFetchTime = now;
+
+        // Tell Vercel + browsers to cache this response
+        res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
 
         res.status(200).json(responseData);
 
     } catch (error) {
         console.error("Judas API Error:", error);
-
-        // Return cached data on error if available
         if (cachedData) {
+            res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=60');
             return res.status(200).json(cachedData);
         }
-
         res.status(200).json({ connected: false, judas: [], recentSells: [] });
     }
 }
