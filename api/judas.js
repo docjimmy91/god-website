@@ -1,4 +1,4 @@
-// /api/judas.js - With protection against fake large sells + fullWallet for Solscan
+// /api/judas.js - Improved SOL amount detection (only count what the seller actually received)
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
@@ -18,25 +18,26 @@ export default async function handler(req, res) {
         if (Array.isArray(transactions)) {
             transactions.forEach(tx => {
                 let solReceived = 0;
+                const seller = tx.feePayer; // The wallet that initiated the sell
 
                 if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
-                        if (transfer.amount) {
+                        // Only count SOL that was actually sent TO the seller
+                        if (transfer.toUserAccount === seller && transfer.amount) {
                             solReceived += parseFloat(transfer.amount) / 1e9;
                         }
                     });
                 }
 
-                // Only accept reasonable single sells (max 30 SOL per transaction)
+                // Filter: Only include reasonable sells (between 0.15 SOL and 30 SOL)
                 if (solReceived > 0.15 && solReceived < 30) {
-                    const wallet = tx.feePayer || tx.fromUserAccount || "Unknown";
-                    const shortWallet = wallet.slice(0, 6) + "..." + wallet.slice(-4);
+                    const shortWallet = seller.slice(0, 6) + "..." + seller.slice(-4);
 
                     if (!walletMap[shortWallet]) {
                         walletMap[shortWallet] = { 
                             total: 0, 
                             count: 0, 
-                            fullWallet: wallet   // Store full address for Solscan
+                            fullWallet: seller 
                         };
                     }
                     walletMap[shortWallet].total += solReceived;
@@ -44,7 +45,7 @@ export default async function handler(req, res) {
 
                     recentSellsList.push({
                         wallet: shortWallet,
-                        fullWallet: wallet,           // Full address for Solscan link
+                        fullWallet: seller,
                         sol: solReceived,
                         time: new Date(tx.timestamp * 1000).toLocaleTimeString([], { 
                             hour: '2-digit', minute: '2-digit' 
@@ -56,17 +57,16 @@ export default async function handler(req, res) {
 
         // Sort and create leaderboard
         const sorted = Object.entries(walletMap).sort((a, b) => b[1].total - a[1].total);
-        
+
         const leaderboard = sorted.slice(0, 8).map(([shortWallet, data], index) => ({
             rank: index + 1,
-            wallet: shortWallet,           // Short version for display
-            fullWallet: data.fullWallet,   // Full address for Solscan
+            wallet: shortWallet,
+            fullWallet: data.fullWallet,
             totalSold: data.total.toFixed(2) + " SOL",
             sells: data.count,
             lastSell: "recent"
         }));
 
-        // Judas #1 = Biggest legitimate seller
         const judasOne = sorted.length > 0 ? {
             wallet: sorted[0][0],
             fullWallet: sorted[0][1].fullWallet,
