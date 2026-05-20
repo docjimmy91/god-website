@@ -1,4 +1,8 @@
-// /api/judas.js - Threshold set to 0.15
+// /api/judas.js - With rate limit protection + caching
+let cachedData = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
@@ -7,9 +11,26 @@ export default async function handler(req, res) {
         return res.status(200).json({ connected: false, judas: [], recentSells: [] });
     }
 
+    const now = Date.now();
+
+    // Return cached data if it's still fresh
+    if (cachedData && (now - lastFetchTime < CACHE_DURATION)) {
+        return res.status(200).json(cachedData);
+    }
+
     try {
         const url = `https://api.helius.xyz/v0/addresses/${BONDING_CURVE}/transactions?api-key=${HELIUS_API_KEY}&limit=150`;
         const response = await fetch(url);
+
+        // Handle rate limiting
+        if (response.status === 429) {
+            console.warn("Helius rate limit hit. Returning cached data if available.");
+            if (cachedData) {
+                return res.status(200).json(cachedData);
+            }
+            return res.status(200).json({ connected: false, judas: [], recentSells: [] });
+        }
+
         const transactions = await response.json();
 
         const walletMap = {};
@@ -38,7 +59,6 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // Threshold set back to 0.15
                 if (solReceived > 0.15 && solReceived < 25) {
                     const shortWallet = seller.slice(0, 6) + "..." + seller.slice(-4);
 
@@ -82,7 +102,7 @@ export default async function handler(req, res) {
             sells: sorted[0][1].count
         } : null;
 
-        res.status(200).json({
+        const responseData = {
             connected: true,
             judas: leaderboard,
             recentSells: recentSellsList.slice(0, 8),
@@ -92,10 +112,22 @@ export default async function handler(req, res) {
                 totalSold: "Live data",
                 biggestSell: judasOne ? judasOne.totalSold : "$--"
             }
-        });
+        };
+
+        // Cache the successful response
+        cachedData = responseData;
+        lastFetchTime = now;
+
+        res.status(200).json(responseData);
 
     } catch (error) {
         console.error("Judas API Error:", error);
+
+        // Return cached data on error if available
+        if (cachedData) {
+            return res.status(200).json(cachedData);
+        }
+
         res.status(200).json({ connected: false, judas: [], recentSells: [] });
     }
 }
