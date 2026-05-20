@@ -149,12 +149,11 @@
             </div>
         </div>
 
-        <!-- Two Column Layout -->
+        <!-- Two Column Commandments -->
         <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
 
-            <!-- LEFT COLUMN: 1-5 -->
+            <!-- LEFT: 1-5 -->
             <div class="space-y-6">
-                <!-- 1 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">1</div>
                     <div>
@@ -162,7 +161,6 @@
                         <p class="text-white/70 mt-1">For he who dumps at the first sign of red shall be cast into the land of eternal regret.</p>
                     </div>
                 </div>
-                <!-- 2 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">2</div>
                     <div>
@@ -170,7 +168,6 @@
                         <p class="text-white/70 mt-1">Those who sell for small gains shall be labeled and remembered in the Judas Tracker forever.</p>
                     </div>
                 </div>
-                <!-- 3 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">3</div>
                     <div>
@@ -178,7 +175,6 @@
                         <p class="text-white/70 mt-1">Spread the word of $GOD to the four corners of Crypto Twitter and Telegram.</p>
                     </div>
                 </div>
-                <!-- 4 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">4</div>
                     <div>
@@ -186,7 +182,6 @@
                         <p class="text-white/70 mt-1">For the dips are tests of faith, and the faithful shall be rewarded with higher prices.</p>
                     </div>
                 </div>
-                <!-- 5 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">5</div>
                     <div>
@@ -196,9 +191,8 @@
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN: 6-10 -->
+            <!-- RIGHT: 6-10 -->
             <div class="space-y-6">
-                <!-- 6 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">6</div>
                     <div>
@@ -206,7 +200,6 @@
                         <p class="text-white/70 mt-1">He who speaks negatively of $GOD in public shall be known as a paperhanded heretic.</p>
                     </div>
                 </div>
-                <!-- 7 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">7</div>
                     <div>
@@ -214,7 +207,6 @@
                         <p class="text-white/70 mt-1">HODL with strength, for the mission is not sideways, it is upward.</p>
                     </div>
                 </div>
-                <!-- 8 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">8</div>
                     <div>
@@ -222,7 +214,6 @@
                         <p class="text-white/70 mt-1">Better to hold with faith than to sell in fear and cry in the comments.</p>
                     </div>
                 </div>
-                <!-- 9 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">9</div>
                     <div>
@@ -230,7 +221,6 @@
                         <p class="text-white/70 mt-1">A community that shills together, moons together.</p>
                     </div>
                 </div>
-                <!-- 10 -->
                 <div class="flex gap-4">
                     <div class="flex-shrink-0 w-9 h-9 bg-yellow-400/10 text-yellow-400 rounded-2xl flex items-center justify-center font-bold text-lg">10</div>
                     <div>
@@ -239,7 +229,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </section>
 
@@ -259,13 +248,15 @@
         function renderLeaderboard(data) {
             const tbody = document.getElementById('judas-leaderboard');
             tbody.innerHTML = data.map(item => {
-                // Create Solscan link (using short wallet for demo - replace with full address when available)
-                const solscanLink = `https://solscan.io/account/${item.wallet}`;
+                const fullAddress = item.fullWallet || item.wallet;
+                const solscanLink = `https://solscan.io/account/${fullAddress}`;
+
                 return `
                     <tr>
                         <td class="py-4 px-6 font-bold text-yellow-400">#${item.rank}</td>
                         <td class="py-4 px-6">
-                            <a href="${solscanLink}" target="_blank" class="font-mono text-red-400 hover:text-red-300 hover:underline">
+                            <a href="${solscanLink}" target="_blank" 
+                               class="font-mono text-red-400 hover:text-red-300 hover:underline">
                                 ${item.wallet}
                             </a>
                         </td>
@@ -283,11 +274,14 @@
                 return;
             }
             container.innerHTML = data.map(sell => {
-                const solscanLink = `https://solscan.io/account/${sell.wallet}`;
+                const fullAddress = sell.fullWallet || sell.wallet;
+                const solscanLink = `https://solscan.io/account/${fullAddress}`;
+
                 return `
                     <div class="px-6 py-4 flex justify-between text-sm">
                         <div>
-                            <a href="${solscanLink}" target="_blank" class="font-mono text-red-400 hover:text-red-300 hover:underline">
+                            <a href="${solscanLink}" target="_blank" 
+                               class="font-mono text-red-400 hover:text-red-300 hover:underline">
                                 ${sell.wallet}
                             </a>
                             <span class="ml-2 text-[10px] px-2 py-px bg-red-500/10 text-red-400 rounded">JUDAS</span>
@@ -303,7 +297,7 @@
 
         function init() {
             fetchJudasData();
-            setInterval(fetchJudasData, 600000); // 10 minutes
+            setInterval(fetchJudasData, 600000); // Auto refresh every 10 minutes
         }
         window.onload = init;
     </script>
