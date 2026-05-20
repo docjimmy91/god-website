@@ -1,4 +1,4 @@
-// /api/judas.js - With protection against fake large sells
+// /api/judas.js - With protection against fake large sells + fullWallet for Solscan
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
@@ -33,13 +33,18 @@ export default async function handler(req, res) {
                     const shortWallet = wallet.slice(0, 6) + "..." + wallet.slice(-4);
 
                     if (!walletMap[shortWallet]) {
-                        walletMap[shortWallet] = { total: 0, count: 0 };
+                        walletMap[shortWallet] = { 
+                            total: 0, 
+                            count: 0, 
+                            fullWallet: wallet   // Store full address for Solscan
+                        };
                     }
                     walletMap[shortWallet].total += solReceived;
                     walletMap[shortWallet].count += 1;
 
                     recentSellsList.push({
                         wallet: shortWallet,
+                        fullWallet: wallet,           // Full address for Solscan link
                         sol: solReceived,
                         time: new Date(tx.timestamp * 1000).toLocaleTimeString([], { 
                             hour: '2-digit', minute: '2-digit' 
@@ -52,9 +57,10 @@ export default async function handler(req, res) {
         // Sort and create leaderboard
         const sorted = Object.entries(walletMap).sort((a, b) => b[1].total - a[1].total);
         
-        const leaderboard = sorted.slice(0, 8).map(([wallet, data], index) => ({
+        const leaderboard = sorted.slice(0, 8).map(([shortWallet, data], index) => ({
             rank: index + 1,
-            wallet,
+            wallet: shortWallet,           // Short version for display
+            fullWallet: data.fullWallet,   // Full address for Solscan
             totalSold: data.total.toFixed(2) + " SOL",
             sells: data.count,
             lastSell: "recent"
@@ -63,6 +69,7 @@ export default async function handler(req, res) {
         // Judas #1 = Biggest legitimate seller
         const judasOne = sorted.length > 0 ? {
             wallet: sorted[0][0],
+            fullWallet: sorted[0][1].fullWallet,
             totalSold: sorted[0][1].total.toFixed(2) + " SOL",
             sells: sorted[0][1].count
         } : null;
