@@ -1,4 +1,4 @@
-// /api/judas.js - More permissive version
+// /api/judas.js - Threshold set to 0.15
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
                 let solReceived = 0;
                 const seller = tx.feePayer;
 
-                // Primary: SOL coming from the bonding curve
+                // Method 1: SOL leaving the bonding curve
                 if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
                         if (transfer.fromUserAccount === BONDING_CURVE && transfer.amount) {
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // Fallback: SOL received by the seller
+                // Method 2: Fallback - SOL received by the seller
                 if (solReceived === 0 && tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
                         if (transfer.toUserAccount === seller && transfer.amount) {
@@ -38,8 +38,8 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // Lowered threshold to catch more sells
-                if (solReceived > 0.05) {
+                // Threshold set back to 0.15
+                if (solReceived > 0.15 && solReceived < 25) {
                     const shortWallet = seller.slice(0, 6) + "..." + seller.slice(-4);
 
                     if (!walletMap[shortWallet]) {
@@ -75,14 +75,22 @@ export default async function handler(req, res) {
             lastSell: "recent"
         }));
 
+        const judasOne = sorted.length > 0 ? {
+            wallet: sorted[0][0],
+            fullWallet: sorted[0][1].fullWallet,
+            totalSold: sorted[0][1].total.toFixed(2) + " SOL",
+            sells: sorted[0][1].count
+        } : null;
+
         res.status(200).json({
             connected: true,
             judas: leaderboard,
             recentSells: recentSellsList.slice(0, 8),
+            judasOne: judasOne,
             stats: {
                 totalJudas: leaderboard.length,
                 totalSold: "Live data",
-                biggestSell: leaderboard.length > 0 ? leaderboard[0].totalSold : "$--"
+                biggestSell: judasOne ? judasOne.totalSold : "$--"
             }
         });
 
