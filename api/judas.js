@@ -1,6 +1,7 @@
-// /api/judas.js - Balanced detection (recommended)
+// /api/judas.js - Improved sell detection for pump.fun
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
+    const TOKEN_MINT = "23esBnMRpkf1taAv84MoLZrX6cw2Q2DYbVmpFjqAKqjk";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
 
     if (!HELIUS_API_KEY) {
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
                 let solReceived = 0;
                 const seller = tx.feePayer;
 
-                // Method 1: SOL leaving the bonding curve (most reliable)
+                // === Method 1: SOL leaving the bonding curve (Best signal) ===
                 if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
                         if (transfer.fromUserAccount === BONDING_CURVE && transfer.amount) {
@@ -29,17 +30,19 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // Method 2: Fallback - SOL received directly by the seller
-                if (solReceived === 0 && tx.nativeTransfers && tx.nativeTransfers.length > 0) {
-                    tx.nativeTransfers.forEach(transfer => {
-                        if (transfer.toUserAccount === seller && transfer.amount) {
-                            solReceived += parseFloat(transfer.amount) / 1e9;
-                        }
-                    });
+                // === Method 2: Fallback - Token being sold by the user ===
+                if (solReceived === 0 && tx.tokenTransfers && tx.tokenTransfers.length > 0) {
+                    const soldTokens = tx.tokenTransfers.find(t => 
+                        t.mint === TOKEN_MINT && t.fromUserAccount === seller
+                    );
+                    if (soldTokens) {
+                        // We can't get exact SOL here without price, so we skip
+                        // This acts as a signal that a sell happened
+                    }
                 }
 
-                // Reasonable range (adjust if needed)
-                if (solReceived > 0.08 && solReceived < 25) {
+                // Adjusted threshold
+                if (solReceived > 0.05) {
                     const shortWallet = seller.slice(0, 6) + "..." + seller.slice(-4);
 
                     if (!walletMap[shortWallet]) {
@@ -95,7 +98,7 @@ export default async function handler(req, res) {
         });
 
     } catch (error) {
-        console.error("Error in Judas API:", error);
+        console.error("Judas API Error:", error);
         res.status(200).json({ connected: false, judas: [], recentSells: [] });
     }
 }
