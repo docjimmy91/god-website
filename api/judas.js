@@ -1,4 +1,4 @@
-// /api/judas.js - With protection against fake large sells
+// /api/judas.js - More permissive version
 export default async function handler(req, res) {
     const BONDING_CURVE = "AQbSZAUH5CWXiUoByWPAu7sCqyVGzrD39isKZTwHywzG";
     const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
@@ -8,7 +8,6 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Changed from 50 to 150 transactions
         const url = `https://api.helius.xyz/v0/addresses/${BONDING_CURVE}/transactions?api-key=${HELIUS_API_KEY}&limit=150`;
         const response = await fetch(url);
         const transactions = await response.json();
@@ -21,7 +20,7 @@ export default async function handler(req, res) {
                 let solReceived = 0;
                 const seller = tx.feePayer;
 
-                // Method 1: SOL leaving the bonding curve
+                // Primary: SOL coming from the bonding curve
                 if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
                         if (transfer.fromUserAccount === BONDING_CURVE && transfer.amount) {
@@ -30,7 +29,7 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // Method 2: Fallback - SOL received by the seller
+                // Fallback: SOL received by the seller
                 if (solReceived === 0 && tx.nativeTransfers && tx.nativeTransfers.length > 0) {
                     tx.nativeTransfers.forEach(transfer => {
                         if (transfer.toUserAccount === seller && transfer.amount) {
@@ -39,7 +38,8 @@ export default async function handler(req, res) {
                     });
                 }
 
-                if (solReceived > 0.08 && solReceived < 25) {
+                // Lowered threshold to catch more sells
+                if (solReceived > 0.05) {
                     const shortWallet = seller.slice(0, 6) + "..." + seller.slice(-4);
 
                     if (!walletMap[shortWallet]) {
@@ -75,27 +75,19 @@ export default async function handler(req, res) {
             lastSell: "recent"
         }));
 
-        const judasOne = sorted.length > 0 ? {
-            wallet: sorted[0][0],
-            fullWallet: sorted[0][1].fullWallet,
-            totalSold: sorted[0][1].total.toFixed(2) + " SOL",
-            sells: sorted[0][1].count
-        } : null;
-
         res.status(200).json({
             connected: true,
             judas: leaderboard,
             recentSells: recentSellsList.slice(0, 8),
-            judasOne: judasOne,
             stats: {
                 totalJudas: leaderboard.length,
                 totalSold: "Live data",
-                biggestSell: judasOne ? judasOne.totalSold : "$--"
+                biggestSell: leaderboard.length > 0 ? leaderboard[0].totalSold : "$--"
             }
         });
 
     } catch (error) {
-        console.error("Error in Judas API:", error);
+        console.error("Judas API Error:", error);
         res.status(200).json({ connected: false, judas: [], recentSells: [] });
     }
 }
